@@ -1,17 +1,9 @@
 # netsDB - A UDF-Centric Analytics Database
 
 
-
-## [NOTE] THIS IS A FORK OF ASU CACTUS LAB'S NETSDB PROJECT. 
-DONE FOR GROUP TERM PROJECT IN CSE598 COURSE
-
-
-
-
 ## Credits
 
 netsDB is built on top of an earlier version of the open source project PlinyCompute (https://github.com/riceplinygroup/plinycompute).
-
 
 
 ## Building
