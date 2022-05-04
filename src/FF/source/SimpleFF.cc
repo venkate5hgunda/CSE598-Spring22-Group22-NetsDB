@@ -11,6 +11,7 @@
 #include "FFReluBiasSum.h"
 #include "FFRowAggregate.h"
 #include "FFTransposeBiasSum.h"
+#include "FFTransposeBiasSumSigmoid.h"
 #include "FFTransposeMult.h"
 #include "FFMatrixPartitioner.h"
 #include "FFMatrixUtil.h"
@@ -78,7 +79,6 @@ void setup(pdb::PDBClient &pdbClient, string database) {
   loadLibrary(pdbClient, "libraries/libFFTransposeBiasSum.so");
   loadLibrary(pdbClient, "libraries/libFFRowAggregate.so");
   loadLibrary(pdbClient, "libraries/libFFOutputLayer.so");
-
 }
 
 void cleanup(pdb::PDBClient &pdblient, string database) {
@@ -88,7 +88,7 @@ void cleanup(pdb::PDBClient &pdblient, string database) {
   // pdblient.removeSet(database, "yo", errMsg);
 }
 
-static bool materializeHash = false;
+static bool materializeHash = true;
 
 
 void inference_compute(pdb::PDBClient &pdbClient, string database, string w1,
@@ -423,7 +423,9 @@ void inference_unit(pdb::PDBClient &pdbClient, string database, string w1,
   }
 }
 
-void inference_unit(pdb::PDBClient &pdbClient, std::string database, std::string w, std::string inputs, std::string b, std::string output, double dropout_rate, bool enablePartition=false) {
+
+// Inference_Unit for Logistic Regression
+void inference_unit_log_reg(pdb::PDBClient &pdbClient, std::string database, std::string w, std::string inputs, std::string b, std::string output, double dropout_rate, bool enablePartition) {
     string errMsg;
 
     {
@@ -435,24 +437,24 @@ void inference_unit(pdb::PDBClient &pdbClient, std::string database, std::string
 
         // join w,x as one compute unit for compute localization
         pdb::Handle<pdb::Computation> join_W_IN = pdb::makeObject<FFTransposeMult>();
-        join->setInput(0, read_W);
-        join->setInput(1, read_IN);
+        join_W_IN->setInput(0, read_IN); // 5000x6
+        join_W_IN->setInput(1, read_W); // 1x6
 
-        // compute w*x
+        // define the computation w*x
         pdb::Handle<pdb::Computation> aggregate_W_IN = pdb::makeObject<FFAggMatrix>();
         aggregate_W_IN->setInput(join_W_IN);
 
         // read b
         pdb::Handle<pdb::Computation> read_B = pdb::makeObject<FFMatrixBlockScanner>(database, b);
 
-        // join (w*x) and b along with exp() operation on each element
-        pdb::Handle<pdb::Computation> exp_of_W_X_plus_B = pdb::makeObject<FFTransposeBiasSum>();
-        exp_of_W_IN_plus_B->setInput(0, aggregate_W_IN);
+        // define the computation: join (w*x) and b along with exp() operation on each element
+        pdb::Handle<pdb::Computation> exp_of_W_IN_plus_B = pdb::makeObject<FFTransposeBiasSum>();
+        exp_of_W_IN_plus_B->setInput(0, join_W_IN);  // used to be aggregate_W_IN
         exp_of_W_IN_plus_B->setInput(1, read_B);
 
         // compute y_intermediate = exp(w*x + b) where sigmoid operation is still pending
         pdb::Handle<pdb::Computation> aggregate_y_intermediate = pdb::makeObject<FFMatrixWriter>(database, "y");
-        aggregate_y_intermediate->setInput(exp_of_W_X_plus_B);
+        aggregate_y_intermediate->setInput(exp_of_W_IN_plus_B);
 
         auto timer_begin_y_intermediate = std::chrono::high_resolution_clock::now();
         // execute the computation
@@ -463,20 +465,26 @@ void inference_unit(pdb::PDBClient &pdbClient, std::string database, std::string
         auto timer_end_y_intermediate = std::chrono::high_resolution_clock::now();
         std::cout << "Inference-unit Intermediate Stage Time Duration: " << std::chrono::duration_cast<std::chrono::duration<float>>(timer_end_y_intermediate - timer_begin_y_intermediate).count() << " secs." << std::endl;
 
-        // read computed y_intermediate
+        // read computed y_intermediate: x
         pdb::Handle<pdb::Computation> read_y_intermediate = makeObject<FFMatrixBlockScanner>(database, "y");
-
-        // define sum of exponents (that is y_intermediate values)
+        cout << "Checkpoint: read_y_intermediate" << endl;
+        // define sum of exponents (that is y_intermediate values) sigma(exp(x))
         pdb::Handle<pdb::Computation> sum_y_intermediate_values = makeObject<FFRowAggregate>();
+        sum_y_intermediate_values->setInput(read_y_intermediate);
 
-        // define softmax operation by setting read_y_intermediate and sum_y_intermediate_values
+        pdb::Handle<pdb::Computation> read_y_intermediate_for_sigmoid = makeObject<FFMatrixBlockScanner>(database, "y");
+
+        cout << "Checkpoint: sum_y_intermediate_values" << endl;
+        // define softmax operation by setting read_y_intermediate and sum_y_intermediate_values: sigmoid=x/sigma(x)
         pdb::Handle<pdb::Computation> softmax = pdb::makeObject<FFOutputLayer>();
-        softmax->setInput(0, read_y_intermediate);
+        softmax->setInput(0, read_y_intermediate_for_sigmoid);
         softmax->setInput(1, sum_y_intermediate_values);
+        cout << "Checkpoint: softmax" << endl;
 
-        // compute the operation and write it to output
+        // define the compute operation and write it to output
         pdb::Handle<pdb::Computation> output_writer = pdb::makeObject<FFMatrixWriter>(database, output);
         output_writer->setInput(softmax);
+        cout << "Checkpoint: output_writer" << endl;
 
         auto timer_begin_y = std::chrono::high_resolution_clock::now();
         // execute the computation
@@ -485,7 +493,53 @@ void inference_unit(pdb::PDBClient &pdbClient, std::string database, std::string
             exit(1);
         }
         auto timer_end_y = std::chrono::high_resolution_clock::now();
+        cout << "Checkpoint: executeComputations" << endl;
         std::cout << "Inference-unit Stage Time Duration: " << std::chrono::duration_cast<std::chrono::duration<float>>(timer_end_y - timer_begin_y).count() << " secs." << std::endl;
+    }
+}
+
+// Inference_Unit for Logistic Regression
+void inference_unit_log_reg1(pdb::PDBClient &pdbClient, std::string database, std::string w, std::string inputs, std::string b, std::string output, bool enablePartition) {
+    string errMsg;
+
+    {
+        const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
+
+        // read w,inputs
+        pdb::Handle<pdb::Computation> read_W = makeObject<FFMatrixBlockScanner>(database, w);
+        pdb::Handle<pdb::Computation> read_IN = makeObject<FFMatrixBlockScanner>(database, inputs);
+
+        // join w,x as one compute unit for compute localization
+        pdb::Handle<pdb::Computation> join_W_IN = pdb::makeObject<FFInputLayerJoin>();
+	//pdb::Handle<pdb::Computation> join_W_IN = pdb::makeObject<FFTransposeMulti>();
+        join_W_IN->setInput(0, read_IN); //5000x6 
+        join_W_IN->setInput(1, read_W); //6x1
+
+        // define the computation w*x
+        //pdb::Handle<pdb::Computation> aggregate_W_IN = pdb::makeObject<FFAggMatrix>();
+        //aggregate_W_IN->setInput(join_W_IN);
+
+        // read b
+        pdb::Handle<pdb::Computation> read_B = pdb::makeObject<FFMatrixBlockScanner>(database, b);
+
+        // define the computation: join (w*x) and b along with exp() operation on each element
+        pdb::Handle<pdb::Computation> exp_of_W_IN_plus_B = pdb::makeObject<FFTransposeBiasSumSigmoid>();
+        exp_of_W_IN_plus_B->setInput(0, join_W_IN);
+        exp_of_W_IN_plus_B->setInput(1, read_B);
+
+        // compute y_intermediate = exp(w*x + b) where sigmoid operation is still pending
+        pdb::Handle<pdb::Computation> write_y = pdb::makeObject<FFMatrixWriter>(database, "output");
+        write_y->setInput(exp_of_W_IN_plus_B);
+
+        auto timer_begin_y = std::chrono::high_resolution_clock::now();
+        // execute the computation
+        if (!pdbClient.executeComputations(errMsg, "inference-unit", materializeHash, write_y)) {
+            cout << "Computation failed. Message was: " << errMsg << "\n";
+            exit(1);
+        }
+        auto timer_end_y = std::chrono::high_resolution_clock::now();
+        std::cout << "Inference-unit Stage Time Duration: " << std::chrono::duration_cast<std::chrono::duration<float>>(timer_end_y - timer_begin_y).count() << " secs." << std::endl;
+
     }
 }
 

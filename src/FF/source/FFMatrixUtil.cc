@@ -29,11 +29,11 @@ void load_matrix_data(pdb::PDBClient &pdbClient, string path,
   is >> totalX;
 
   while (is.peek() == ',' || is.peek() == ' ')
-    is.ignore();
+      is.ignore();
 
   is >> totalY;
 
-  cout << totalX << ", " << totalY << endl;
+  cout << "\nSetName: " << setName << " has total size (X,Y): " << totalX << ", " << totalY << endl;
 
   vector<vector<double>> matrix;
 
@@ -78,13 +78,16 @@ void load_matrix_data(pdb::PDBClient &pdbClient, string path,
                 exit(1);
               }
 
-              is >> val;
-              while (is.peek() == ',' || is.peek() == ' ')
-                is.ignore();
+              if(curX >= totalX || curY >= totalY) {
+                  (*(myData->getRawDataHandle()))[ii * actual_blockY + jj] = 0;
 
-              // row = i * blockX + ii, col = j * blockY + jj
-              double data = curX >= totalX || curY >= totalY ? 0 : val;
-              (*(myData->getRawDataHandle()))[ii * actual_blockY + jj] = data;
+	      }
+              else {
+                  is >> val;
+                  while (is.peek() == ',' || is.peek() == ' ')
+                      is.ignore();
+                  (*(myData->getRawDataHandle()))[ii * actual_blockY + jj] = val;
+              }
               jj++;
             }
             ii++;
@@ -154,7 +157,7 @@ void load_matrix_data(pdb::PDBClient &pdbClient, string path,
 
   is >> totalY;
 
-  cout << totalX << ", " << totalY << endl;
+  cout << "\nSetName: " << setName << " has total size (X,Y): " << totalX << ", " << totalY << endl;
 
   vector<vector<double>> matrix;
 
@@ -163,6 +166,7 @@ void load_matrix_data(pdb::PDBClient &pdbClient, string path,
     vector<double> line;
     for (int j = 0; j < totalY; j++) {
       is >> val;
+      cout << "load_matrix_data: " << setName << "[" << i << "," << j << "]" << ": " << val << endl;
       line.push_back(val);
       while (is.peek() == ',' || is.peek() == ' ')
         is.ignore();
@@ -276,6 +280,7 @@ void loadMatrix(pdb::PDBClient &pdbClient, pdb::String dbName,
               double data = curX >= totalX || curY >= totalY ? 0
                             : (bool)gen()                    ? distn(e2)
                                                              : distp(e2);
+                cout << "loadMatrix: " << setName << "[" << (ii * actual_blockY + jj) << "]" << ": " << data << endl;
               (*(myData->getRawDataHandle()))[ii * actual_blockY + jj] = data;
               jj++;
             }
@@ -323,6 +328,7 @@ void loadMatrix(pdb::PDBClient &pdbClient, pdb::String dbName,
 }
 
 void load_matrix_from_file(string path, vector<vector<double>> &matrix) {
+    cout << "Checkpoint load_matrix_from_file" << endl;
   if (path.size() == 0) {
     throw runtime_error("Invalid filepath: " + path);
   }
@@ -338,13 +344,15 @@ void load_matrix_from_file(string path, vector<vector<double>> &matrix) {
 
   // load the data stats
   is >> totalX;
+  // totalX = 1462623;
 
   while (is.peek() == ',' || is.peek() == ' ')
     is.ignore();
 
   is >> totalY;
+  // totalY = 1;
 
-  cout << totalX << ", " << totalY << endl;
+  cout << "load_matrix_from_file: " << totalX << ", " << totalY << endl;
 
   double val;
   for (int i = 0; i < totalX; i++) {
@@ -357,6 +365,7 @@ void load_matrix_from_file(string path, vector<vector<double>> &matrix) {
     }
     matrix.push_back(line);
   }
+    cout << "Loaded Matrix Size: " << matrix.size() << ", " << matrix[0].size() << endl;
 }
 
 bool is_empty_set(pdb::PDBClient &pdbClient, pdb::CatalogClient &catalogClient,

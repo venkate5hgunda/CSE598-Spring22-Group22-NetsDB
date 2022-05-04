@@ -11,12 +11,13 @@
 #include "SelectionComp.h"
 #include <eigen3/Eigen/Dense>
 
-using namespace std;
+using namespace pdb;
 
 double sigmoid(double x);
 double outLabel(double x);
+void randomGen(Handle<Vector<double>> vec);
 
-class LogisticRegression : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
+class Logistic_Regression : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
     private:
         int numFeatures;
         int numLabels;
@@ -29,9 +30,9 @@ class LogisticRegression : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
     public:
         ENABLE_DEEP_COPY
 
-        LogisticRegression() {}
+        Logistic_Regression() {}
 
-        LogisticRegression(int numFeatures, int numLabels, int numNeurons, uint32_t sizeBatch) {
+        Logistic_Regression(int numFeatures, int numLabels, int numNeurons, uint32_t sizeBatch) {
             this->numFeatures = numFeatures;
             this->numLabels = numLabels;
             this->numNeurons = numNeurons;
@@ -66,7 +67,7 @@ class LogisticRegression : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
                 double *inData = in->getValue().rawData->c_ptr();
                 Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> x(inData, numFeatures, sizeBatch);
                 Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> w(weights->c_ptr(), numNeurons, numFeatures);
-                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> b(bias->c_ptr(), numNeurons, 1);
+                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> b(biases->c_ptr(), numNeurons, 1);
                 Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> y(output->c_ptr(), numNeurons, sizeBatch);
 
                 // Logistic Regression Function: f(x) = sigmoid(w*x + b)
@@ -79,7 +80,7 @@ class LogisticRegression : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
 
                 double *outData = resultFFMatrixBlock->getValue().rawData->c_ptr();
 
-                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> resultMatrix(outData, numLabels, sizeBatch);
+                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> resultMatrix(outData, numLabels, sizeBatch);
 
                 resultMatrix = y;
 

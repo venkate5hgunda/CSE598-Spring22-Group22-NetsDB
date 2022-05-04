@@ -718,7 +718,7 @@ common_env.Program('bin/tpchTraining1',
                    ['build/tpch/tpchTraining1.cc'] + all + pdb_client)
 common_env.Program('bin/tpchGenTrace',
                    ['build/tpch/tpchGenTrace.cc'] + all + pdb_client)
-
+common_env.Program('bin/testDedup', ['build/tests/TestDeduplication.cc']+ all + pdb_client)
 common_env.Program('bin/sequentialReadWrite',
                    ['build/tests/SequentialReadWriteTest.cc'] + all + pdb_client)
 common_env.Program('bin/tpchDataLoader',
@@ -828,6 +828,8 @@ common_env.Program('bin/pipelineBench',
 # common_env.SharedLibrary('libraries/.so', ['build/FF/.cc'] + all)
 common_env.SharedLibrary('libraries/libFFMatrixBlock.so',
                          ['build/FF/FFMatrixBlock.cc'] + all)
+common_env.SharedLibrary('libraries/libFFSingleMatrix.so',
+                         ['build/FF/FFSingleMatrix.cc'] + all)    
 common_env.SharedLibrary('libraries/libFFMatrixData.so',
                          ['build/FF/FFMatrixData.cc'] + all)
 common_env.SharedLibrary('libraries/libFFMatrixMeta.so',
@@ -840,10 +842,14 @@ common_env.SharedLibrary('libraries/libFFMatrixWriter.so',
                          ['build/FF/FFMatrixWriter.cc'] + all)
 common_env.SharedLibrary('libraries/libFFAggMatrix.so',
                          ['build/FF/FFAggMatrix.cc'] + all)
+common_env.SharedLibrary('libraries/libFFAggMatrixToOneMatrix.so',
+                        ['build/FF/FFAggMatrixToOneMatrix.cc'] + all)                      
 common_env.SharedLibrary('libraries/libFFTransposeMult.so',
                          ['build/FF/FFTransposeMult.cc'] + all)
 common_env.SharedLibrary('libraries/libFFTransposeBiasSum.so',
                          ['build/FF/FFTransposeBiasSum.cc'] + all)
+common_env.SharedLibrary('libraries/libFFTransposeBiasSumSigmoid.so',
+                         ['build/FF/FFTransposeBiasSumSigmoid.cc'] + all)
 common_env.SharedLibrary('libraries/libFFReluBiasSum.so',
                          ['build/FF/FFReluBiasSum.cc'] + all)
 common_env.SharedLibrary('libraries/libFFRowAggregate.so',
@@ -1325,6 +1331,12 @@ common_env.Program('bin/word2vec', ['build/word2vec/Word2Vec.cc',
                                     'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
 common_env.Program('bin/FFTest', ['build/tests/FFTest.cc',
                                   'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
+common_env.Program('bin/LogisticRegressionTest',  ['build/tests/LogisticRegressionTest.cc', 'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
+common_env.Program('bin/LogisticRegressionTest1',  ['build/tests/LogisticRegressionTest1.cc', 'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
+common_env.Program('bin/FFTestWithoutDeduplication', ['build/tests/FFTestWithoutDeduplication.cc',
+                                  'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
+common_env.Program('bin/FFTestWithDeduplication', ['build/tests/FFTestWithDeduplication.cc',
+                                  'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
 common_env.Program('bin/RedditFeatureExtractor', ['build/tests/RedditFeatureExtractor.cc',
                                                   'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
 common_env.Program(
@@ -1388,11 +1400,35 @@ common_env.SharedLibrary('libraries/libEmbeddingSegment.so',
                         ['build/word2vec/EmbeddingSegment.cc'] + all)
 common_env.SharedLibrary('libraries/libSemanticClassifier.so',
                         ['build/word2vec/SemanticClassifier.cc'] + all)
+common_env.SharedLibrary('libraries/libSemanticClassifierSingleBlock.so',
+                        ['build/word2vec/SemanticClassifierSingleBlock.cc'] + all)
 common_env.Program('bin/classifier', 
                         ['build/tests/TestSemanticClassifier.cc', 'build/FF/SimpleFF.cc',
                         'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
 common_env.Program('bin/dedupClassifier',
                         ['build/tests/TestSemanticClassificationWithDeduplication.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
+common_env.Program('bin/semanticWithoutDedup',
+                        ['build/tests/heterogeneousModelDeduplication/TextClassifierWithoutDeduplication.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
+common_env.Program('bin/semantic_nnlm128_yelp', 
+                        ['build/tests/heterogeneousModelDeduplication/TestNNLM128Yelp.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
+common_env.Program('bin/semantic_nnlm50_imdb', 
+                        ['build/tests/heterogeneousModelDeduplication/TestNNLM50IMDB.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
+common_env.Program('bin/semantic_wiki500_yelp', 
+                        ['build/tests/heterogeneousModelDeduplication/TestWiki500Yelp.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
+common_env.Program('bin/semantic_wiki250_civil', 
+                        ['build/tests/heterogeneousModelDeduplication/TestWiki250Civil.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)                                                
+common_env.Program('bin/semanticDedup',
+                        ['build/tests/TextClassifierDeduplication.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)   
+
+common_env.Program('bin/hybridDedup',
+                        ['build/tests/HybridTestWithDeduplication.cc', 'build/FF/SimpleFF.cc',
                         'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
 
 # Testing
@@ -1852,6 +1888,7 @@ libFFTest = common_env.Alias('libword2vec', [
     'bin/pdb-cluster',
     'bin/pdb-server',
     'bin/word2vec',
+    'bin/testDedup',
     'bin/testTensorBlockIndex',
     'bin/testSharedTensorBlockSet',
     'bin/testWord2VecWithDeduplication',
@@ -1865,6 +1902,42 @@ libFFTest = common_env.Alias('libword2vec', [
     'libraries/libFFInputLayerJoin.so',
     'libraries/libFFMatrixWriter.so',
     'libraries/libFFAggMatrix.so',
+    'libraries/libFFTransposeBiasSum.so',
+    'libraries/libFFTransposeMult.so',
+    'libraries/libFFReluBiasSum.so',
+    'libraries/libFFRowAggregate.so',
+    'libraries/libFFOutputLayer.so',
+    'libraries/libFFMatrixMultiSel.so',
+    'libraries/libInferenceResult.so',
+    'libraries/libInferenceResultPartition.so',
+    'libraries/libFFMatrixPartitioner.so',
+])
+
+libFFTest = common_env.Alias('libHeteroModel', [
+    'bin/pdb-cluster',
+    'bin/pdb-server',
+    'bin/semanticDedup',
+    'bin/hybridDedup',
+    'bin/semanticWithoutDedup',
+    #'bin/semantic_nnlm128_yelp',
+    #'bin/semantic_nnlm50_imdb',
+    #'bin/semantic_wiki250_civil',
+    #'bin/semantic_wiki500_yelp',
+    # 'bin/dedupClassifier',
+    # 'bin/FCProjTest',
+    # Other libraries from src/FF
+    'libraries/libFullyConnectedNetwork.so',
+    'libraries/libSemanticClassifier.so',
+    'libraries/libSemanticClassifierSingleBlock.so',
+    'libraries/libFFMatrixBlock.so',
+    'libraries/libFFSingleMatrix.so',
+    'libraries/libFFMatrixMeta.so',
+    'libraries/libFFMatrixData.so',
+    'libraries/libFFMatrixBlockScanner.so',
+    'libraries/libFFInputLayerJoin.so',
+    'libraries/libFFMatrixWriter.so',
+    'libraries/libFFAggMatrix.so',
+    'libraries/libFFAggMatrixToOneMatrix.so',
     'libraries/libFFTransposeBiasSum.so',
     'libraries/libFFTransposeMult.so',
     'libraries/libFFReluBiasSum.so',
@@ -1907,7 +1980,9 @@ libFFTest = common_env.Alias('libclassifier', [
 libFFTest = common_env.Alias('libFFTest', [
     'bin/pdb-cluster',
     'bin/pdb-server',
-
+    'bin/testDedup',
+    'bin/FFTestWithoutDeduplication',
+    'bin/FFTestWithDeduplication',
     'bin/FFTest',
     'bin/RedditFeatureExtractor',
     'bin/loadRedditCommentsIndexPartition',
@@ -1943,6 +2018,42 @@ libFFTest = common_env.Alias('libFFTest', [
     'libraries/libRedditCommentBlockToMatrix.so',
     'libraries/libRedditCommentChunkToComments.so',
     'libraries/libRedditMatrixBlockPartition.so',
+])
+
+libLogRegTest = common_env.Alias('libLogRegTest', [
+    'bin/pdb-cluster',
+    'bin/pdb-server',
+    # 'bin/FFTest',
+    'bin/LogisticRegressionTest',
+    # Other libraries from src/FF
+    'libraries/libFFMatrixBlock.so',
+    'libraries/libFFMatrixMeta.so',
+    'libraries/libFFMatrixData.so',
+    'libraries/libFFMatrixBlockScanner.so',
+    'libraries/libFFInputLayerJoin.so',
+    'libraries/libFFMatrixWriter.so',
+    'libraries/libFFAggMatrix.so',
+    'libraries/libFFTransposeBiasSum.so',
+    'libraries/libFFTransposeBiasSumSigmoid.so',
+    'libraries/libFFTransposeMult.so',
+])
+
+libLogRegTest1 = common_env.Alias('libLogRegTest1', [
+    'bin/pdb-cluster',
+    'bin/pdb-server',
+    # 'bin/FFTest',
+    'bin/LogisticRegressionTest1',
+    # Other libraries from src/FF
+    'libraries/libFFMatrixBlock.so',
+    'libraries/libFFMatrixMeta.so',
+    'libraries/libFFMatrixData.so',
+    'libraries/libFFMatrixBlockScanner.so',
+    'libraries/libFFInputLayerJoin.so',
+    'libraries/libFFMatrixWriter.so',
+    'libraries/libFFAggMatrix.so',
+    'libraries/libFFTransposeBiasSum.so',
+    'libraries/libFFTransposeBiasSumSigmoid.so',
+    'libraries/libFFTransposeMult.so',
 ])
 
 libLSTMTest = common_env.Alias('libLSTMTest', [
