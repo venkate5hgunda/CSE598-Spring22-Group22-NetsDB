@@ -1,7 +1,8 @@
 #ifndef ABSTRACT_JOBSTAGE_H
 #define ABSTRACT_JOBSTAGE_H
 
-#include "/home/venkateshgunda/Code/netsdb/src/conf/headers/DataTypes.h"
+// Relative Path to keep the code more Globalized
+#include "../../conf/headers/DataTypes.h"
 
 namespace pdb {
 
