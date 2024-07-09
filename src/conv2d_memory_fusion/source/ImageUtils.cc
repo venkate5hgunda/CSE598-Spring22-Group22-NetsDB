@@ -85,7 +85,7 @@ void load_imgs_from_file(PDBClient &pdbClient, string path, String dbName,
           im++;
           myData = pdb::makeObject<M>(im, x, y, channels);
       }
-      rollback = false;
+      rollback = true;
       while (c < channels) {
         chan =
             pdb::makeObject<FFMatrixBlock>(0, 0, x, y, x, y);
